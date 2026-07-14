@@ -1,32 +1,41 @@
-# React + TypeScript + Vite
+# Barcode Label Designer
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A web-based barcode label designer with WYSIWYG editing, built with React, Fabric.js, and bwip-js.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Visual label editor** — drag, resize, rotate elements on canvas
+- **Barcode generation** — Code 128, Code 39, EAN-13, EAN-8, UPC-A, UPC-E, ITF-14, QR Code, Data Matrix, PDF417, GS1-128
+- **Text & shapes** — add text boxes (with font family/size/style/color/alignment) and rectangles/ellipses
+- **Serial number batch printing** — use `{N}` or `{N:6}` placeholders in barcode text for auto-incrementing per copy
+- **Alignment tools** — align left/center/right/top/middle/bottom (single element aligns to label edge, multi-selection to bounding box)
+- **Print** — browser print with `@page` sizing, or direct USB (ESC/POS WebUSB) for thermal printers
+- **Export** — PDF download
+- **Label size presets** — Xprinter 40×30mm through 100×70mm, plus custom sizes
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Usage
+
+1. Add elements using the toolbar on top
+2. Select and edit elements in the properties panel on the right
+3. For serial batch printing, type `{N:6}` in the barcode text, then open Print → enable Serial Number
+4. Print via browser (any printer) or WebUSB (thermal printer)
+
+## Build
+
+```bash
+npm run build
+```
+
+## Stack
+
+- React + TypeScript + Vite
+- Fabric.js (canvas editor)
+- bwip-js (barcode rendering)
+- ESC/POS (WebUSB thermal printing)
