@@ -26,6 +26,9 @@ export default function PrintDialog({ open, onClose }: PrintDialogProps) {
   const [serialEnabled, setSerialEnabled] = useState(false);
   const [serialStart, setSerialStart] = useState(1);
   const [serialFormat, setSerialFormat] = useState('{N:6}');
+  const [paperW, setPaperW] = useState(150);
+  const [paperH, setPaperH] = useState(100);
+  const [labelMargin, setLabelMargin] = useState(2);
 
   const template = useLabelStore((s) => s.template);
   const canvasDataUrl = useLabelStore((s) => s.canvasDataUrl);
@@ -49,9 +52,9 @@ export default function PrintDialog({ open, onClose }: PrintDialogProps) {
     setStatus('Preparing print...');
 
     try {
-      let pageDataUrls: string[];
+      let labelDataUrls: string[];
       if (serialEnabled) {
-        pageDataUrls = [];
+        labelDataUrls = [];
         const els = useLabelStore.getState().template.elements;
         for (let i = 0; i < copies; i++) {
           const sn = serialStart + i;
@@ -60,26 +63,66 @@ export default function PrintDialog({ open, onClose }: PrintDialogProps) {
             setStatus('Failed to render serial label.');
             return;
           }
-          pageDataUrls.push(url);
+          labelDataUrls.push(url);
         }
       } else {
         if (!canvasDataUrl) {
           setStatus('No label content to print.');
           return;
         }
-        pageDataUrls = Array(copies).fill(canvasDataUrl);
+        labelDataUrls = Array(copies).fill(canvasDataUrl);
       }
 
       const img = new Image();
-      img.src = pageDataUrls[0];
+      img.src = labelDataUrls[0];
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
       });
-      const iw = img.naturalWidth;
-      const ih = img.naturalHeight;
-      const mmW = ((iw / 2) / 96) * 25.4;
-      const mmH = ((ih / 2) / 96) * 25.4;
+
+      const mm = labelMargin;
+      const labelWmm = labelW + mm;
+      const labelHmm = labelH + mm;
+      const cols = Math.max(1, Math.floor(paperW / labelWmm));
+      const rows = Math.max(1, Math.floor(paperH / labelHmm));
+      const labelsPerPage = cols * rows;
+      const totalPages = Math.ceil(labelDataUrls.length / labelsPerPage);
+
+      const pageStyle = `
+        @page { size: ${paperW}mm ${paperH}mm; margin: 0; }
+        html, body { margin: 0; padding: 0; width: ${paperW}mm; height: ${paperH}mm; overflow: hidden; }
+        .page {
+          width: ${paperW}mm; height: ${paperH}mm;
+          display: grid;
+          grid-template-columns: repeat(${cols}, 1fr);
+          grid-template-rows: repeat(${rows}, 1fr);
+          gap: ${mm}mm;
+          padding: 0;
+          page-break-after: always;
+          box-sizing: border-box;
+          align-content: start;
+        }
+        .page:last-child { page-break-after: auto; }
+        .cell {
+          display: flex; align-items: center; justify-content: center;
+          overflow: hidden;
+        }
+        .cell img {
+          width: 100%; height: 100%;
+          object-fit: contain;
+          image-rendering: pixelated;
+        }
+      `;
+
+      let pagesHtml = '';
+      for (let p = 0; p < totalPages; p++) {
+        const start = p * labelsPerPage;
+        const end = Math.min(start + labelsPerPage, labelDataUrls.length);
+        const cellsHtml = labelDataUrls.slice(start, end)
+          .map((url) => `<div class="cell"><img src="${url}" /></div>`)
+          .join('');
+        pagesHtml += `<div class="page">${cellsHtml}</div>`;
+      }
 
       const win = window.open('', '_blank');
       if (!win) {
@@ -87,22 +130,14 @@ export default function PrintDialog({ open, onClose }: PrintDialogProps) {
         return;
       }
 
-      const copiesHtml = pageDataUrls.map((url, i) => {
-        const sep = i < copies - 1 ? ' page-break-after: always;' : '';
-        return `<img src="${url}" style="display:block;width:100%;height:auto;image-rendering:pixelated;${sep}" />`;
-      }).join('\n');
-
       win.document.write(`
         <!DOCTYPE html>
         <html>
         <head><title>${template.name}</title>
-        <style>
-          @page { size: ${mmW}mm ${mmH}mm; margin: 0; }
-          body { margin: 0; padding: 0; }
-        </style>
+        <style>${pageStyle}</style>
         </head>
         <body>
-          ${copiesHtml}
+          ${pagesHtml}
           <script>
             setTimeout(function() {
               window.print();
@@ -200,6 +235,30 @@ export default function PrintDialog({ open, onClose }: PrintDialogProps) {
                 <input type="number" min={1} max={999} value={copies}
                   onChange={(e) => setCopies(Math.max(1, Number(e.target.value)))} />
               </label>
+
+              <section style={{ marginTop: 8, padding: '8px 12px', background: '#f5f5f5', borderRadius: 6 }}>
+                <h4 style={{ margin: '0 0 6px' }}>Paper Size &amp; Layout</h4>
+                <small style={{ color: '#888', display: 'block', marginBottom: 6 }}>
+                  Labels: {labelW}×{labelH}mm &middot; Fits {Math.max(1, Math.floor(paperW / (labelW + labelMargin)))}×{Math.max(1, Math.floor(paperH / (labelH + labelMargin)))} = {Math.max(1, Math.floor(paperW / (labelW + labelMargin))) * Math.max(1, Math.floor(paperH / (labelH + labelMargin)))} per page
+                </small>
+                <div className="pos-row">
+                  <label>
+                    Paper W (mm)
+                    <input type="number" min={50} max={1000} value={paperW}
+                      onChange={(e) => setPaperW(Math.max(50, Number(e.target.value)))} />
+                  </label>
+                  <label>
+                    Paper H (mm)
+                    <input type="number" min={50} max={1000} value={paperH}
+                      onChange={(e) => setPaperH(Math.max(50, Number(e.target.value)))} />
+                  </label>
+                  <label>
+                    Gap (mm)
+                    <input type="number" min={0} max={20} value={labelMargin}
+                      onChange={(e) => setLabelMargin(Math.max(0, Number(e.target.value)))} />
+                  </label>
+                </div>
+              </section>
 
               <section style={{ marginTop: 12, padding: '8px 12px', background: '#f5f5f5', borderRadius: 6 }}>
                 <h4 style={{ margin: 0 }}>
