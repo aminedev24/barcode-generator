@@ -14,9 +14,11 @@ interface LabelState {
   selectedElementId: string | null;
   zoom: number;
   canvasDataUrl: string | null;
+  previewProductId: string | null;
 
   setZoom: (zoom: number) => void;
   setCanvasDataUrl: (url: string | null) => void;
+  setPreviewProductId: (id: string | null) => void;
 
   setTemplateName: (name: string) => void;
   setLabelSize: (width: number, height: number) => void;
@@ -57,9 +59,11 @@ export const useLabelStore = create<LabelState>((set) => ({
   selectedElementId: null,
   zoom: 1.5,
   canvasDataUrl: null,
+  previewProductId: null,
 
   setZoom: (zoom) => set({ zoom: Math.max(0.25, Math.min(5, zoom)) }),
   setCanvasDataUrl: (url) => set({ canvasDataUrl: url }),
+  setPreviewProductId: (id) => set({ previewProductId: id }),
 
   setTemplateName: (name) =>
     set((s) => ({

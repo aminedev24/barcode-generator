@@ -1,10 +1,32 @@
 import { generateBarcode } from './barcode';
+import { useProductStore } from '../store/productStore';
+import { useLabelStore } from '../store/labelStore';
 import type { LabelElement, BarcodeElement, TextElement, ShapeElement } from '../types/label';
+
+export function resolvePreviewText(raw: string): string {
+  const products = useProductStore.getState().products;
+  const previewId = useLabelStore.getState().previewProductId;
+  const picked = previewId ? products.find((p) => p.id === previewId) : undefined;
+  const first = picked ?? products[0];
+  let t = raw;
+  if (first) {
+    t = t.split('{PRODUCT_NAME}').join(first.name);
+    t = t.split('{PRODUCT}').join(first.barcode);
+  } else {
+    t = t.split('{PRODUCT_NAME}').join('Product Name');
+    t = t.split('{PRODUCT}').join('123456');
+  }
+  t = t.replace(/\{N(?::([^}]+))?\}/g, (_, fmt) =>
+    fmt ? String(1).padStart(parseInt(fmt) || 6, '0') : '1'
+  );
+  return t;
+}
 
 export async function renderElementsToDataUrl(
   elements: LabelElement[],
   serialNumber?: number,
-  serialFormat?: string
+  serialFormat?: string,
+  variables?: Record<string, string>
 ): Promise<string | null> {
   const visible = elements.filter((e) => e.visible);
   if (visible.length === 0) return null;
@@ -34,11 +56,24 @@ export async function renderElementsToDataUrl(
   const ox = -minX + pad;
   const oy = -minY + pad;
 
-  function resolveBarcodeText(text: string): string {
-    if (serialNumber === undefined || !serialFormat) return text;
-    return text.replace(/\{N(?::([^}]+))?\}/g, (_, fmt) => {
-      return fmt ? serialNumber.toString().padStart(parseInt(fmt) || 6, '0') : String(serialNumber);
-    });
+  function resolveText(raw: string): string {
+    let t = raw;
+    if (serialNumber !== undefined && serialFormat) {
+      t = t.replace(/\{N(?::([^}]+))?\}/g, (_, fmt) => {
+        return fmt
+          ? serialNumber.toString().padStart(parseInt(fmt) || 6, '0')
+          : String(serialNumber);
+      });
+    }
+    if (variables) {
+      for (const [key, val] of Object.entries(variables)) {
+        t = t.split(`{${key}}`).join(val);
+      }
+    }
+    if (/\{/.test(t)) {
+      t = resolvePreviewText(t);
+    }
+    return t;
   }
 
   for (const el of sorted) {
@@ -54,7 +89,7 @@ export async function renderElementsToDataUrl(
 
       if (el.type === 'barcode') {
         const be = el as BarcodeElement;
-        const barcodeText = resolveBarcodeText(be.text);
+        const barcodeText = resolveText(be.text);
         const dataUrl = await generateBarcode(be.format, barcodeText, be.scale, be.barHeight, be.includeText, be.background);
         if (dataUrl) {
           const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -76,7 +111,7 @@ export async function renderElementsToDataUrl(
         ctx.font = `${te.fontStyle} ${te.fontWeight} ${te.fontSize}px ${ff}`;
         ctx.textBaseline = 'top';
 
-        const lines = te.content.split('\n');
+        const lines = resolveText(te.content).split('\n');
         const lh = te.fontSize * 1.2;
         for (let i = 0; i < lines.length; i++) {
           const lineY = t + i * lh;

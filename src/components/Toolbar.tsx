@@ -14,6 +14,8 @@ import {
   PiPrinter,
   PiFilePdf,
   PiPlus,
+  PiScan,
+  PiListDashes,
   PiAlignLeft,
   PiAlignCenterHorizontal,
   PiAlignRight,
@@ -27,6 +29,8 @@ interface ToolbarProps {
   onPrint?: () => void;
   onExportPdf?: () => void;
   onNew?: () => void;
+  onScan?: () => void;
+  onProducts?: () => void;
 }
 
 const QUICK_FORMATS = [
@@ -38,7 +42,7 @@ const QUICK_FORMATS = [
   { label: 'PDF417', format: 'pdf417', icon: '▌' },
 ];
 
-export default function Toolbar({ onSave, onPrint, onExportPdf, onNew }: ToolbarProps) {
+export default function Toolbar({ onSave, onPrint, onExportPdf, onNew, onScan, onProducts }: ToolbarProps) {
   const selectedElementId = useLabelStore((s) => s.selectedElementId);
   const addBarcode = useLabelStore((s) => s.addBarcode);
   const addText = useLabelStore((s) => s.addText);
@@ -164,6 +168,12 @@ export default function Toolbar({ onSave, onPrint, onExportPdf, onNew }: Toolbar
         </button>
         <button onClick={onPrint} title="Print (Ctrl+P)">
           <PiPrinter /> Print
+        </button>
+        <button onClick={onScan} title="Scan & Count Barcodes">
+          <PiScan /> Scan
+        </button>
+        <button onClick={onProducts} title="Manage Products & Stock">
+          <PiListDashes /> Products
         </button>
       </div>
     </div>

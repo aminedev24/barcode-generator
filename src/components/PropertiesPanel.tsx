@@ -1,4 +1,5 @@
 import { useLabelStore } from '../store/labelStore';
+import { useProductStore } from '../store/productStore';
 import { PiTextAlignLeft, PiTextAlignCenter, PiTextAlignRight } from 'react-icons/pi';
 import type {
   BarcodeElement,
@@ -9,12 +10,24 @@ import type {
 
 function BarcodeProperties({ el }: { el: BarcodeElement }) {
   const updateElement = useLabelStore((s) => s.updateElement);
+  const previewProductId = useLabelStore((s) => s.previewProductId);
+  const setPreviewProductId = useLabelStore((s) => s.setPreviewProductId);
+  const products = useProductStore((s) => s.products);
 
   const formats = [
     'code128', 'code39', 'code93', 'ean13', 'ean8',
     'upca', 'upce', 'itf14', 'qrcode', 'datamatrix',
     'pdf417', 'gs1128',
   ];
+
+  const requiredDigits: Record<string, number> = {
+    ean13: 13, ean8: 8, upca: 12, upce: 7, itf14: 14,
+  };
+  const required = requiredDigits[el.format];
+  const digitError =
+    required && /^\d+$/.test(el.text) && el.text.length !== required
+      ? `${el.format.toUpperCase()} requires ${required} digits — yours has ${el.text.length}. Use Code 128 for any length.`
+      : null;
 
   return (
     <div className="properties-section">
@@ -42,6 +55,45 @@ function BarcodeProperties({ el }: { el: BarcodeElement }) {
           }
         />
       </label>
+      {digitError && <small className="field-error">{digitError}</small>}
+      <div className="chip-row">
+        <button
+          type="button"
+          className={el.text === '{PRODUCT}' ? 'chip active' : 'chip'}
+          onClick={() => updateElement(el.id, { text: '{PRODUCT}' } as Partial<BarcodeElement>)}
+          title="Print this label for every product in the catalog"
+        >
+          {'{PRODUCT}'}
+        </button>
+        <button
+          type="button"
+          className={/\{N/.test(el.text) ? 'chip active' : 'chip'}
+          onClick={() => updateElement(el.id, { text: '{N:6}' } as Partial<BarcodeElement>)}
+          title="Automatically number each copy 000001, 000002, ..."
+        >
+          {'{N:6}'} serial
+        </button>
+      </div>
+      {/\{/.test(el.text) && (
+        <small className="field-hint">
+          Canvas shows an example. The real value appears when printing.
+        </small>
+      )}
+      {el.text === '{PRODUCT}' && products.length > 0 && (
+        <label>
+          Example product
+          <select
+            value={previewProductId ?? ''}
+            onChange={(e) => setPreviewProductId(e.target.value || null)}
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.barcode})
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label>
         Scale
         <input
@@ -107,6 +159,16 @@ function TextProperties({ el }: { el: TextElement }) {
           }
         />
       </label>
+      <div className="chip-row">
+        <button
+          type="button"
+          className={el.content === '{PRODUCT_NAME}' ? 'chip active' : 'chip'}
+          onClick={() => updateElement(el.id, { content: '{PRODUCT_NAME}' } as Partial<TextElement>)}
+          title="Show this product's name from the catalog"
+        >
+          {'{PRODUCT_NAME}'}
+        </button>
+      </div>
       <label>
         Font Size
         <input

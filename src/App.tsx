@@ -3,6 +3,8 @@ import Toolbar from './components/Toolbar';
 import PropertiesPanel from './components/PropertiesPanel';
 import LabelCanvas from './components/LabelCanvas';
 import PrintDialog from './components/PrintDialog';
+import ScanDialog from './components/ScanDialog';
+import ProductsDialog from './components/ProductsDialog';
 import { useLabelStore } from './store/labelStore';
 import { exportToPDF } from './utils/pdfExport';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -10,6 +12,8 @@ import './App.css';
 
 export default function App() {
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [productsDialogOpen, setProductsDialogOpen] = useState(false);
 
   const template = useLabelStore((s) => s.template);
   const loadTemplate = useLabelStore((s) => s.loadTemplate);
@@ -79,6 +83,8 @@ export default function App() {
         onSave={handleSave}
         onPrint={handlePrint}
         onExportPdf={handleExportPdf}
+        onScan={() => setScanDialogOpen(true)}
+        onProducts={() => setProductsDialogOpen(true)}
       />
       <div className="main-area">
         <div className="sidebar-left">
@@ -137,6 +143,18 @@ export default function App() {
       <PrintDialog
         open={printDialogOpen}
         onClose={() => setPrintDialogOpen(false)}
+      />
+      <ScanDialog
+        open={scanDialogOpen}
+        onClose={() => setScanDialogOpen(false)}
+      />
+      <ProductsDialog
+        open={productsDialogOpen}
+        onClose={() => setProductsDialogOpen(false)}
+        onPrintLabels={() => {
+          setProductsDialogOpen(false);
+          setPrintDialogOpen(true);
+        }}
       />
     </div>
   );

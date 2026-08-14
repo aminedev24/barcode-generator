@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Canvas, Rect, Textbox, FabricImage } from 'fabric';
 import { useLabelStore } from '../store/labelStore';
 import { generateBarcode } from '../utils/barcode';
-import { renderElementsToDataUrl } from '../utils/renderPreview';
+import { renderElementsToDataUrl, resolvePreviewText } from '../utils/renderPreview';
 import type {
   LabelElement,
   BarcodeElement,
@@ -11,6 +11,18 @@ import type {
 } from '../types/label';
 
 const MM_TO_PX = 3.779527;
+
+const DEMO_BARCODES: Record<string, string> = {
+  ean13: '1234567890128',
+  ean8: '12345670',
+  upca: '123456789012',
+  upce: '1234567',
+  itf14: '12345678901231',
+  gs1128: '0101234567890128',
+  qrcode: 'PRODUCT-000001',
+  datamatrix: 'PRODUCT-000001',
+  pdf417: 'PRODUCT-000001',
+};
 
 function toPixels(value: number, unit: 'mm' | 'in'): number {
   return unit === 'mm' ? value * MM_TO_PX : value * 96;
@@ -38,6 +50,7 @@ export default function LabelCanvas() {
   const selectElement = useLabelStore((s) => s.selectElement);
   const updateElement = useLabelStore((s) => s.updateElement);
   const setCanvasDataUrl = useLabelStore((s) => s.setCanvasDataUrl);
+  const previewProductId = useLabelStore((s) => s.previewProductId);
   const elements = template.elements;
 
   const labelW = toPixels(template.width, template.unit);
@@ -237,7 +250,8 @@ export default function LabelCanvas() {
 
   const syncBarcodeElement = useCallback(async (canvas: Canvas, el: BarcodeElement) => {
     const existing = fabricObjectsRef.current.get(el.id);
-    const contentKey = `${el.format}_${el.text}_${el.scale}_${el.barHeight}_${el.includeText}`;
+    const displayText = resolvePreviewText(el.text);
+    const contentKey = `${el.format}_${displayText}_${el.scale}_${el.barHeight}_${el.includeText}`;
 
     if (existing && existing.type === 'image' && (existing as any).__barcodeKey === contentKey) {
       if (!el.visible) { existing.visible = false; existing.setCoords(); return; }
@@ -258,8 +272,19 @@ export default function LabelCanvas() {
     }
 
     const dataUrl = await generateBarcode(
-      el.format, el.text, el.scale, el.barHeight, el.includeText, el.background
+      el.format, displayText, el.scale, el.barHeight, el.includeText, el.background
     );
+
+    const finalUrl =
+      dataUrl ||
+      (await generateBarcode(
+        el.format,
+        DEMO_BARCODES[el.format] || '123456',
+        el.scale,
+        el.barHeight,
+        el.includeText,
+        el.background
+      ));
 
     suppressSelectionClear.current = true;
     try {
@@ -268,9 +293,9 @@ export default function LabelCanvas() {
         fabricObjectsRef.current.delete(el.id);
       }
 
-      if (dataUrl) {
+      if (finalUrl) {
         try {
-          const img = await FabricImage.fromURL(dataUrl);
+          const img = await FabricImage.fromURL(finalUrl);
           img.set({
             left: el.left, top: el.top,
             scaleX: el.width / (img.width || 1),
@@ -316,6 +341,7 @@ export default function LabelCanvas() {
 
   const syncTextElement = useCallback((_canvas: Canvas, el: TextElement) => {
     const existing = fabricObjectsRef.current.get(el.id);
+    const displayContent = resolvePreviewText(el.content);
     if (existing) {
       if (!el.visible) {
         existing.visible = false;
@@ -334,7 +360,8 @@ export default function LabelCanvas() {
       } else {
         existing.set({ visible: true } as any);
       }
-      if (existing.text !== el.content) existing.text = el.content;
+      if (existing.text !== displayContent) existing.text = displayContent;
+      existing.editable = !/\{/.test(el.content);
       const style = {
         fontSize: el.fontSize, fontFamily: el.fontFamily,
         fontWeight: el.fontWeight, fontStyle: el.fontStyle,
@@ -346,12 +373,13 @@ export default function LabelCanvas() {
       return;
     }
     if (!el.visible) return;
-    const textbox = new Textbox(el.content, {
+    const textbox = new Textbox(displayContent, {
       left: el.left, top: el.top, width: el.width, height: el.height,
       fontSize: el.fontSize, fontFamily: el.fontFamily,
       fontWeight: el.fontWeight, fontStyle: el.fontStyle,
       textAlign: el.textAlign, fill: el.fill, underline: el.underline,
       angle: el.rotation,
+      editable: !/\{/.test(el.content),
       customId: el.id, customType: 'text', locked: el.locked,
     } as any);
     _canvas.add(textbox);
@@ -464,7 +492,7 @@ export default function LabelCanvas() {
 
     canvas.renderAll();
     requestAnimationFrame(() => updatePreviewRef.current());
-  }, [elements, labelW, labelH, rebuildBackground, syncBarcodeElement, syncTextElement, syncShapeElement]);
+  }, [elements, labelW, labelH, rebuildBackground, syncBarcodeElement, syncTextElement, syncShapeElement, previewProductId]);
 
   return (
     <div className="canvas-container" style={{ overflow: 'hidden', flex: 1, position: 'relative' }}>
