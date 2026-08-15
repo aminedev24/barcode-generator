@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 * {
   margin: 0;
   padding: 0;
@@ -10,23 +12,6 @@ body {
   background: #1e1e1e;
   color: #d4d4d4;
   overflow: hidden;
-}
-
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: #2d2d2d;
-  border-bottom: 1px solid #3c3c3c;
-  min-height: 40px;
-  flex-shrink: 0;
 }
 
 .toolbar-group {
@@ -81,22 +66,6 @@ body {
   min-width: 40px;
   text-align: center;
   color: #999;
-}
-
-.main-area {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.sidebar-left {
-  width: 180px;
-  background: #252526;
-  border-right: 1px solid #3c3c3c;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  overflow-y: auto;
 }
 
 .sidebar-section {
@@ -171,18 +140,8 @@ body {
   padding: 4px;
 }
 
-.canvas-container {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-
 .properties-panel {
-  width: 250px;
-  background: #252526;
-  border-left: 1px solid #3c3c3c;
   overflow-y: auto;
-  flex-shrink: 0;
 }
 
 .properties-section {
@@ -324,6 +283,10 @@ kbd {
   display: block;
 }
 
+.dropdown-menu.open {
+  display: block;
+}
+
 .dropdown-menu button {
   display: flex;
   align-items: center;
@@ -357,7 +320,6 @@ kbd {
   background: #252526;
   border: 1px solid #3c3c3c;
   border-radius: 8px;
-  width: 520px;
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -538,11 +500,6 @@ kbd {
   color: #7ddfa0;
   font-size: 12px;
   margin-bottom: 8px;
-}
-
-.scan-dialog {
-  width: 720px;
-  max-width: 95vw;
 }
 
 .scan-mode-tabs {
@@ -766,11 +723,6 @@ kbd {
   background: #4a4a4a;
 }
 
-.product-dialog {
-  width: 640px;
-  max-width: 95vw;
-}
-
 .product-add-row {
   align-items: flex-end;
 }
@@ -926,4 +878,38 @@ kbd {
 .product-select-item.checked {
   border-color: #1177bb;
   background: #16303f;
+}
+
+/* Touch devices: open toolbar dropdown on tap/focus, not just hover */
+@media (hover: none) {
+  .toolbar-dropdown:focus-within .dropdown-menu {
+    display: block;
+  }
+  .toolbar-dropdown:hover .dropdown-menu {
+    display: block;
+  }
+}
+
+/* Small screens: let rows wrap instead of overflowing */
+@media (max-width: 640px) {
+  .toolbar-group button,
+  .dropdown-trigger {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .dropdown-menu {
+    min-width: 180px;
+  }
+  .pos-row {
+    flex-wrap: wrap;
+  }
+  .scan-summary {
+    flex-wrap: wrap;
+  }
+  .preset-grid {
+    grid-template-columns: 1fr;
+  }
+  .product-add-row {
+    flex-wrap: wrap;
+  }
 }

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useLabelStore } from '../store/labelStore';
 import { getAlignElements } from './LabelCanvas';
 import {
@@ -43,6 +44,8 @@ const QUICK_FORMATS = [
 ];
 
 export default function Toolbar({ onSave, onPrint, onExportPdf, onNew, onScan, onProducts }: ToolbarProps) {
+  const [barcodeMenuOpen, setBarcodeMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const selectedElementId = useLabelStore((s) => s.selectedElementId);
   const addBarcode = useLabelStore((s) => s.addBarcode);
   const addText = useLabelStore((s) => s.addText);
@@ -54,26 +57,49 @@ export default function Toolbar({ onSave, onPrint, onExportPdf, onNew, onScan, o
   const zoom = useLabelStore((s) => s.zoom);
   const setZoom = useLabelStore((s) => s.setZoom);
 
+  useEffect(() => {
+    if (!barcodeMenuOpen) return;
+    const onDocClick = (e: MouseEvent | TouchEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setBarcodeMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('touchstart', onDocClick);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('touchstart', onDocClick);
+    };
+  }, [barcodeMenuOpen]);
+
   return (
-    <div className="toolbar">
-      <div className="toolbar-group">
+    <div className="toolbar flex min-h-10 shrink-0 flex-wrap items-center gap-1 border-b border-[#3c3c3c] bg-[#2d2d2d] px-2 py-1 max-md:gap-2">
+      <div className="toolbar-group shrink-0">
         <button onClick={onNew} title="New Label (Ctrl+N)">
           <PiPlus /> New
         </button>
       </div>
 
-      <div className="toolbar-separator" />
+      <div className="toolbar-separator shrink-0 max-md:hidden" />
 
-      <div className="toolbar-group">
-        <div className="toolbar-dropdown">
-          <button className="dropdown-trigger" title="Add Barcode">
+      <div className="toolbar-group shrink-0">
+        <div className="toolbar-dropdown" ref={dropdownRef}>
+          <button
+            className="dropdown-trigger"
+            title="Add Barcode"
+            onClick={() => setBarcodeMenuOpen((v) => !v)}
+            aria-expanded={barcodeMenuOpen}
+          >
             <PiBarcode /> Barcode ▾
           </button>
-          <div className="dropdown-menu">
+          <div className={`dropdown-menu${barcodeMenuOpen ? ' open' : ''}`}>
             {QUICK_FORMATS.map((f) => (
               <button
                 key={f.format}
-                onClick={() => addBarcode(f.format as any)}
+                onClick={() => {
+                  addBarcode(f.format as any);
+                  setBarcodeMenuOpen(false);
+                }}
               >
                 {f.icon} {f.label}
               </button>
@@ -88,9 +114,9 @@ export default function Toolbar({ onSave, onPrint, onExportPdf, onNew, onScan, o
         </button>
       </div>
 
-      <div className="toolbar-separator" />
+      <div className="toolbar-separator shrink-0 max-md:hidden" />
 
-      <div className="toolbar-group">
+      <div className="toolbar-group shrink-0">
         <button
           onClick={() => selectedElementId && duplicateElement(selectedElementId)}
           disabled={!selectedElementId}
@@ -122,9 +148,9 @@ export default function Toolbar({ onSave, onPrint, onExportPdf, onNew, onScan, o
         </button>
       </div>
 
-      <div className="toolbar-separator" />
+      <div className="toolbar-separator shrink-0 max-md:hidden" />
 
-      <div className="toolbar-group">
+      <div className="toolbar-group shrink-0">
         <button onClick={() => getAlignElements()?.('left')} disabled={!selectedElementId} title="Align Left">
           <PiAlignLeft />
         </button>
@@ -145,9 +171,9 @@ export default function Toolbar({ onSave, onPrint, onExportPdf, onNew, onScan, o
         </button>
       </div>
 
-      <div className="toolbar-separator" />
+      <div className="toolbar-separator shrink-0 max-md:hidden" />
 
-      <div className="toolbar-group">
+      <div className="toolbar-group shrink-0">
         <button onClick={() => setZoom(zoom - 0.25)} title="Zoom Out">
           <PiMagnifyingGlassMinus />
         </button>
@@ -157,9 +183,9 @@ export default function Toolbar({ onSave, onPrint, onExportPdf, onNew, onScan, o
         </button>
       </div>
 
-      <div className="toolbar-spacer" />
+      <div className="toolbar-spacer max-md:hidden" />
 
-      <div className="toolbar-group">
+      <div className="toolbar-group shrink-0">
         <button onClick={onSave} title="Save Template (Ctrl+S)">
           <PiFloppyDisk /> Save
         </button>

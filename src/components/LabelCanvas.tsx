@@ -223,6 +223,31 @@ export default function LabelCanvas() {
     canvas.renderAll();
   }, []);
 
+  useEffect(() => {
+    const container = canvasElRef.current?.parentElement;
+    if (!container) return;
+    const fitCanvasToLabel = () => {
+      const canvas = fabricRef.current;
+      const cw = container.clientWidth || 0;
+      const ch = container.clientHeight || 0;
+      if (!canvas || !cw) return;
+      const scale = Math.min(1, cw / labelW, ch ? ch / labelH : 1);
+      if (scale < 1) {
+        canvas.setWidth(labelW * scale);
+        canvas.setHeight(labelH * scale);
+        canvas.setZoom(scale);
+      } else {
+        canvas.setWidth(cw);
+        canvas.setHeight(ch || labelH);
+        canvas.setZoom(useLabelStore.getState().zoom);
+      }
+      canvas.renderAll();
+    };
+    fitCanvasToLabel();
+    window.addEventListener('resize', fitCanvasToLabel);
+    return () => window.removeEventListener('resize', fitCanvasToLabel);
+  }, [labelW, labelH]);
+
   const rebuildBackground = useCallback((canvas: Canvas) => {
     const existing = canvas.getObjects().find(
       (o: any) => o.get('customId') === '__label_bg__'
@@ -333,6 +358,7 @@ export default function LabelCanvas() {
         if (obj) canvas.setActiveObject(obj);
       }
 
+      canvas.renderAll();
       requestAnimationFrame(() => updatePreviewRef.current());
     } finally {
       suppressSelectionClear.current = false;
@@ -495,7 +521,7 @@ export default function LabelCanvas() {
   }, [elements, labelW, labelH, rebuildBackground, syncBarcodeElement, syncTextElement, syncShapeElement, previewProductId]);
 
   return (
-    <div className="canvas-container" style={{ overflow: 'hidden', flex: 1, position: 'relative' }}>
+    <div className="canvas-container relative flex flex-1 items-center justify-center overflow-hidden max-md:h-[30vh] max-md:flex-none">
       <canvas ref={canvasElRef} />
     </div>
   );

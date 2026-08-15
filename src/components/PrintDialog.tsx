@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Printer } from '@capgo/capacitor-printer';
 import { useLabelStore } from '../store/labelStore';
 import { useProductStore } from '../store/productStore';
 import { printViaWebUSB, isWebUSBSupported } from '../utils/escpos';
 import { renderElementsToDataUrl } from '../utils/renderPreview';
+import { composePagesToPdf } from '../utils/printPdf';
 import type { BarcodeElement } from '../types/label';
 
 interface PrintDialogProps {
@@ -182,6 +185,44 @@ export default function PrintDialog({ open, onClose }: PrintDialogProps) {
         pagesHtml += `<div class="page">${cellsHtml}</div>`;
       }
 
+      if (Capacitor.isNativePlatform()) {
+        if (catalogEnabled) {
+          for (const product of products) {
+            if (selectedProductIds.includes(product.id)) {
+              addStock(product.barcode, copies);
+            }
+          }
+        }
+        setStatus('Preparing PDF pages...');
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const pdfDataUrl = await composePagesToPdf({
+          pageDataUrls,
+          cols,
+          rows,
+          paperWmm: paperW,
+          paperHmm: paperH,
+          labelWmm: labelW + labelMargin,
+          labelHmm: labelH + labelMargin,
+          gapMm: labelMargin,
+        });
+        const base64 = pdfDataUrl.split(',')[1];
+        await Filesystem.writeFile({
+          path: 'print-job.pdf',
+          data: base64,
+          directory: Directory.Cache,
+        });
+        const uri = (
+          await Filesystem.getUri({
+            path: 'print-job.pdf',
+            directory: Directory.Cache,
+          })
+        ).uri;
+        await Printer.printPdf({ path: uri, name: template.name });
+        setStatus(null);
+        onClose();
+        return;
+      }
+
       const win = window.open('', '_blank');
       if (!win) {
         setStatus('Popup blocked. Allow popups for printing.');
@@ -263,7 +304,7 @@ export default function PrintDialog({ open, onClose }: PrintDialogProps) {
 
   return (
     <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="dialog w-[92vw] max-w-[520px] md:max-w-[520px]" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>Print &amp; Export</h2>
           <button className="dialog-close" onClick={onClose}>×</button>
@@ -478,21 +519,34 @@ export default function PrintDialog({ open, onClose }: PrintDialogProps) {
 
               <div className="print-buttons">
                 <button className="action-btn primary" onClick={handleBrowserPrint}>
-                  🖨 Browser Print
+                  🖨 Print Labels
                 </button>
-                <small>Works with any installed printer (Xprinter driver required)</small>
+                <small>
+                  Opens your device's print dialog — works with Wi-Fi/USB printers and
+                  "Save as PDF"
+                </small>
 
-                {ws && (
+                {!Capacitor.isNativePlatform() && (
                   <>
-                    <button className="action-btn secondary" onClick={handleWebUSBPrint}>
-                      ⚡ Direct USB (ESC/POS)
-                    </button>
-                    <small>WebUSB — direct thermal printing, no driver needed</small>
+                    {ws && (
+                      <>
+                        <button className="action-btn secondary" onClick={handleWebUSBPrint}>
+                          ⚡ Direct USB (ESC/POS)
+                        </button>
+                        <small>WebUSB — direct thermal printing, no driver needed</small>
+                      </>
+                    )}
+                    {!ws && (
+                      <small style={{ color: '#888' }}>
+                        WebUSB not available in this browser. Use Chrome/Edge for direct USB.
+                      </small>
+                    )}
                   </>
                 )}
-                {!ws && (
+                {Capacitor.isNativePlatform() && (
                   <small style={{ color: '#888' }}>
-                    WebUSB not available in this browser. Use Chrome/Edge for direct USB.
+                    Direct USB (ESC/POS) printing is only available on desktop Chrome/Edge.
+                    Use the Print button with a Wi-Fi/bluetooth printer or "Save as PDF".
                   </small>
                 )}
               </div>

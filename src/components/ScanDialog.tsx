@@ -204,7 +204,7 @@ export default function ScanDialog({ open, onClose }: ScanDialogProps) {
 
   return (
     <div className="dialog-overlay" onClick={closeDialog}>
-      <div className="dialog scan-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="dialog scan-dialog w-[92vw] max-w-[720px]" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>Scan &amp; Count Stock</h2>
           <button className="dialog-close" onClick={closeDialog}>×</button>

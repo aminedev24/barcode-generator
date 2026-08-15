@@ -9,7 +9,7 @@ function getImageSize(dataUrl: string): Promise<{ w: number; h: number }> {
   });
 }
 
-export async function exportToPDF(_template: unknown, dataUrl: string) {
+export async function buildPdfDataUrl(dataUrl: string): Promise<string> {
   const { w, h } = await getImageSize(dataUrl);
   const dpr = 2;
   const mmW = (w / dpr) * 0.264583;
@@ -22,7 +22,15 @@ export async function exportToPDF(_template: unknown, dataUrl: string) {
   });
 
   pdf.addImage(dataUrl, 'PNG', 1, 1, mmW, mmH);
-  pdf.save('barcode.pdf');
+  return pdf.output('datauristring');
+}
+
+export async function exportToPDF(_template: unknown, dataUrl: string) {
+  const data = await buildPdfDataUrl(dataUrl);
+  const link = document.createElement('a');
+  link.href = data;
+  link.download = 'barcode.pdf';
+  link.click();
 }
 
 export async function printLabel(dataUrl: string) {

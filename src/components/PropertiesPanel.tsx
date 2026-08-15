@@ -447,7 +447,7 @@ export default function PropertiesPanel() {
   const selectedEl = elements.find((el) => el.id === selectedElementId);
 
   return (
-    <div className="properties-panel">
+    <div className="properties-panel max-h-[30vh] w-full shrink-0 overflow-y-auto border-l border-[#3c3c3c] bg-[#252526] md:max-h-none md:w-[250px] max-md:border-l-0 max-md:border-t">
       <div className="properties-section">
         <h3>Label</h3>
         <label>

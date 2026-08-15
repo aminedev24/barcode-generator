@@ -47,7 +47,7 @@ export default function ProductsDialog({ open, onClose, onPrintLabels }: Product
 
   return (
     <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog product-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="dialog product-dialog w-[92vw] max-w-[640px]" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>Product Catalog</h2>
           <button className="dialog-close" onClick={onClose}>×</button>

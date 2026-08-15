@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Capacitor / Android
+android/.gradle
+android/build
+android/app/build
+android/local.properties
+android/captures
+android/.idea
+android/*.iml
+android/app/.cxx
+android/app/schemas
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

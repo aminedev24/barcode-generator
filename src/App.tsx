@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import Toolbar from './components/Toolbar';
 import PropertiesPanel from './components/PropertiesPanel';
 import LabelCanvas from './components/LabelCanvas';
@@ -6,7 +7,7 @@ import PrintDialog from './components/PrintDialog';
 import ScanDialog from './components/ScanDialog';
 import ProductsDialog from './components/ProductsDialog';
 import { useLabelStore } from './store/labelStore';
-import { exportToPDF } from './utils/pdfExport';
+import { exportToPDF, buildPdfDataUrl } from './utils/pdfExport';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import './App.css';
 
@@ -38,6 +39,33 @@ export default function App() {
   const handleExportPdf = async () => {
     if (!canvasDataUrl) {
       alert('Render the label first by adding elements.');
+      return;
+    }
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const { Share } = await import('@capacitor/share');
+        const dataUrl = await buildPdfDataUrl(canvasDataUrl);
+        const base64 = dataUrl.split(',')[1];
+        await Filesystem.writeFile({
+          path: 'barcode.pdf',
+          data: base64,
+          directory: Directory.Cache,
+        });
+        const uri = (
+          await Filesystem.getUri({
+            path: 'barcode.pdf',
+            directory: Directory.Cache,
+          })
+        ).uri;
+        await Share.share({
+          title: 'Barcode PDF',
+          files: [uri],
+          dialogTitle: 'Export PDF',
+        });
+      } catch (e: any) {
+        alert(e?.message || 'Failed to export PDF.');
+      }
       return;
     }
     await exportToPDF(template, canvasDataUrl);
@@ -77,7 +105,7 @@ export default function App() {
   });
 
   return (
-    <div className="app">
+    <div className="app flex h-screen flex-col max-md:h-auto max-md:min-h-screen max-md:overflow-y-auto">
       <Toolbar
         onNew={handleNew}
         onSave={handleSave}
@@ -86,9 +114,9 @@ export default function App() {
         onScan={() => setScanDialogOpen(true)}
         onProducts={() => setProductsDialogOpen(true)}
       />
-      <div className="main-area">
-        <div className="sidebar-left">
-          <div className="sidebar-section">
+      <div className="main-area flex flex-1 overflow-hidden max-md:flex-col max-md:flex-none max-md:overflow-visible">
+        <div className="sidebar-left flex w-[180px] shrink-0 flex-col overflow-y-auto border-r border-[#3c3c3c] bg-[#252526] max-md:w-full max-md:max-h-52 max-md:border-r-0 max-md:border-b">
+          <div className="sidebar-section hidden md:block">
             <h3>Shortcuts</h3>
             <div className="shortcuts-list">
               <span><kbd>Ctrl+N</kbd> New</span>
