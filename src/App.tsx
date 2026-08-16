@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import Toolbar from './components/Toolbar';
 import PropertiesPanel from './components/PropertiesPanel';
@@ -7,6 +7,7 @@ import PrintDialog from './components/PrintDialog';
 import ScanDialog from './components/ScanDialog';
 import ProductsDialog from './components/ProductsDialog';
 import { useLabelStore } from './store/labelStore';
+import { useProductStore } from './store/productStore';
 import { exportToPDF, buildPdfDataUrl } from './utils/pdfExport';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import './App.css';
@@ -19,6 +20,10 @@ export default function App() {
   const template = useLabelStore((s) => s.template);
   const loadTemplate = useLabelStore((s) => s.loadTemplate);
   const canvasDataUrl = useLabelStore((s) => s.canvasDataUrl);
+
+  useEffect(() => {
+    useProductStore.getState().syncFromApi();
+  }, []);
 
   const handleNew = () => {
     const newTemplate = useLabelStore.getState().getNewTemplate();

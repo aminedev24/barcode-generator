@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { api } from '../api/client';
 
 export interface Product {
   id: string;
@@ -27,6 +28,8 @@ interface ProductState {
   registerScan: (value: string) => void;
   resetCounts: () => void;
   findProduct: (barcode: string) => Product | undefined;
+
+  syncFromApi: () => Promise<void>;
 }
 
 export const useProductStore = create<ProductState>()(
@@ -39,47 +42,54 @@ export const useProductStore = create<ProductState>()(
       addProduct: (name, barcode) => {
         const clean = barcode.trim();
         if (!clean) return;
-        set((s) => ({
-          products: [
-            ...s.products,
-            { id: uuidv4(), name: name.trim() || clean, barcode: clean, stock: 0 },
-          ],
-        }));
+        const product: Product = {
+          id: uuidv4(),
+          name: name.trim() || clean,
+          barcode: clean,
+          stock: 0,
+        };
+        set((s) => ({ products: [...s.products, product] }));
+        api.products.create(product).catch((e) => console.warn('[API] addProduct failed:', e));
       },
 
-      updateProduct: (id, name, barcode) =>
+      updateProduct: (id, name, barcode) => {
+        const patch = {
+          name: name.trim() || undefined,
+          barcode: barcode.trim() || undefined,
+        };
         set((s) => ({
           products: s.products.map((p) =>
             p.id === id
-              ? {
-                  ...p,
-                  name: name.trim() || p.name,
-                  barcode: barcode.trim() || p.barcode,
-                }
+              ? { ...p, name: patch.name || p.name, barcode: patch.barcode || p.barcode }
               : p
           ),
-        })),
+        }));
+        api.products.update(id, patch).catch((e) => console.warn('[API] updateProduct failed:', e));
+      },
 
-      removeProduct: (id) =>
-        set((s) => ({
-          products: s.products.filter((p) => p.id !== id),
-        })),
+      removeProduct: (id) => {
+        set((s) => ({ products: s.products.filter((p) => p.id !== id) }));
+        api.products.remove(id).catch((e) => console.warn('[API] removeProduct failed:', e));
+      },
 
-      addStock: (barcode, qty) =>
+      addStock: (barcode, qty) => {
         set((s) => ({
-          products: s.products.map((p) =>
-            p.barcode.trim() === barcode.trim()
-              ? { ...p, stock: (p.stock ?? 0) + qty }
-              : p
-          ),
-        })),
+          products: s.products.map((p) => {
+            if (p.barcode.trim() !== barcode.trim()) return p;
+            const newStock = (p.stock ?? 0) + qty;
+            api.products.update(p.id, { stock: newStock }).catch((e) => console.warn('[API] addStock failed:', e));
+            return { ...p, stock: newStock };
+          }),
+        }));
+      },
 
-      setStock: (id, qty) =>
+      setStock: (id, qty) => {
+        const stock = Math.max(0, Math.floor(qty || 0));
         set((s) => ({
-          products: s.products.map((p) =>
-            p.id === id ? { ...p, stock: Math.max(0, Math.floor(qty || 0)) } : p
-          ),
-        })),
+          products: s.products.map((p) => (p.id === id ? { ...p, stock } : p)),
+        }));
+        api.products.update(id, { stock }).catch((e) => console.warn('[API] setStock failed:', e));
+      },
 
       registerScan: (value) => {
         if (!value) return;
@@ -94,6 +104,21 @@ export const useProductStore = create<ProductState>()(
 
       findProduct: (barcode) =>
         get().products.find((p) => p.barcode.trim() === barcode.trim()),
+
+      syncFromApi: async () => {
+        try {
+          const rows = await api.products.list();
+          const products: Product[] = rows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            barcode: r.barcode,
+            stock: r.stock,
+          }));
+          set({ products });
+        } catch (e) {
+          console.warn('[API] syncFromApi failed:', e);
+        }
+      },
     }),
     { name: 'barcode-product-catalog' }
   )

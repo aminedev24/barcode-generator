@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useProductStore } from '../store/productStore';
+import { getApiBaseUrl, setApiBaseUrl } from '../api/client';
 import { PiPlus, PiTrash, PiPrinter } from 'react-icons/pi';
 
 interface ProductsDialogProps {
@@ -18,6 +20,8 @@ export default function ProductsDialog({ open, onClose, onPrintLabels }: Product
 
   const [name, setName] = useState('');
   const [barcode, setBarcode] = useState('');
+  const [apiUrl, setApiUrl] = useState(getApiBaseUrl());
+  const isNative = Capacitor.isNativePlatform();
 
   const nextBarcode = useMemo(() => {
     let max = 0;
@@ -172,6 +176,36 @@ export default function ProductsDialog({ open, onClose, onPrintLabels }: Product
               </p>
             )}
           </section>
+
+          {isNative && (
+            <section>
+              <h3>Server Connection</h3>
+              <p className="hint">
+                Enter your computer's local IP so the app can reach the PHP API.
+                Example: <code>http://192.168.1.50/barcode-generator/api</code>
+              </p>
+              <div className="pos-row">
+                <label className="flex-1">
+                  API URL
+                  <input
+                    type="text"
+                    value={apiUrl}
+                    onChange={(e) => setApiUrl(e.target.value)}
+                    placeholder="http://192.168.x.x/barcode-generator/api"
+                  />
+                </label>
+                <button
+                  className="action-btn secondary"
+                  onClick={() => {
+                    setApiBaseUrl(apiUrl);
+                    useProductStore.getState().syncFromApi();
+                  }}
+                >
+                  Save & Sync
+                </button>
+              </div>
+            </section>
+          )}
         </div>
 
         <div className="dialog-footer">
