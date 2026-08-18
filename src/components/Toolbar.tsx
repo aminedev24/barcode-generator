@@ -23,12 +23,14 @@ import {
   PiAlignTop,
   PiAlignCenterVertical,
   PiAlignBottom,
+  PiImage,
 } from 'react-icons/pi';
 
 interface ToolbarProps {
   onSave?: () => void;
   onPrint?: () => void;
   onExportPdf?: () => void;
+  onExportImage?: () => void;
   onNew?: () => void;
   onScan?: () => void;
   onProducts?: () => void;
@@ -43,7 +45,7 @@ const QUICK_FORMATS = [
   { label: 'PDF417', format: 'pdf417', icon: '▌' },
 ];
 
-export default function Toolbar({ onSave, onPrint, onExportPdf, onNew, onScan, onProducts }: ToolbarProps) {
+export default function Toolbar({ onSave, onPrint, onExportPdf, onExportImage, onNew, onScan, onProducts }: ToolbarProps) {
   const [barcodeMenuOpen, setBarcodeMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selectedElementId = useLabelStore((s) => s.selectedElementId);
@@ -191,6 +193,9 @@ export default function Toolbar({ onSave, onPrint, onExportPdf, onNew, onScan, o
         </button>
         <button onClick={onExportPdf} title="Export PDF (Ctrl+E)">
           <PiFilePdf /> PDF
+        </button>
+        <button onClick={onExportImage} title="Export Image (Ctrl+I)">
+          <PiImage /> Image
         </button>
         <button onClick={onPrint} title="Print (Ctrl+P)">
           <PiPrinter /> Print

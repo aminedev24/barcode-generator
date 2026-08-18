@@ -76,6 +76,17 @@ export default function App() {
     await exportToPDF(template, canvasDataUrl);
   };
 
+  const handleExportImage = () => {
+    if (!canvasDataUrl) {
+      alert('Render the label first by adding elements.');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = canvasDataUrl;
+    a.download = `${template.name.replace(/\s+/g, '_')}.png`;
+    a.click();
+  };
+
   const handlePrint = () => {
     if (!canvasDataUrl) {
       alert('Render the label first by adding elements.');
@@ -107,6 +118,7 @@ export default function App() {
     onSave: handleSave,
     onPrint: handlePrint,
     onExportPdf: handleExportPdf,
+    onExportImage: handleExportImage,
   });
 
   return (
@@ -116,6 +128,7 @@ export default function App() {
         onSave={handleSave}
         onPrint={handlePrint}
         onExportPdf={handleExportPdf}
+        onExportImage={handleExportImage}
         onScan={() => setScanDialogOpen(true)}
         onProducts={() => setProductsDialogOpen(true)}
       />
@@ -128,6 +141,7 @@ export default function App() {
               <span><kbd>Ctrl+S</kbd> Save</span>
               <span><kbd>Ctrl+P</kbd> Print</span>
               <span><kbd>Ctrl+E</kbd> PDF</span>
+              <span><kbd>Ctrl+I</kbd> Image</span>
               <span><kbd>Del</kbd> Delete</span>
               <span><kbd>Esc</kbd> Deselect</span>
             </div>

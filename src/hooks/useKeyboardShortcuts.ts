@@ -6,6 +6,7 @@ interface ShortcutHandlers {
   onSave: () => void;
   onPrint: () => void;
   onExportPdf: () => void;
+  onExportImage: () => void;
 }
 
 export function useKeyboardShortcuts({
@@ -13,6 +14,7 @@ export function useKeyboardShortcuts({
   onSave,
   onPrint,
   onExportPdf,
+  onExportImage,
 }: ShortcutHandlers) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,6 +51,12 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      if (ctrl && e.key === 'i') {
+        e.preventDefault();
+        onExportImage();
+        return;
+      }
+
       if (ctrl && e.key === 'z') {
         e.preventDefault();
         return;
@@ -74,5 +82,5 @@ export function useKeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onNew, onSave, onPrint, onExportPdf]);
+  }, [onNew, onSave, onPrint, onExportPdf, onExportImage]);
 }
